@@ -37,9 +37,9 @@ def ask_for_smiley(message):
     text = message.text
     chat_id = message.chat.id
     keyboard = types.ReplyKeyboardMarkup(row_width=3)
-    emoji1 = types.KeyboardButton(text='😊')
-    emoji2 = types.KeyboardButton(text='😢')
-    emoji3 = types.KeyboardButton(text='🙂')
+    emoji3 = types.KeyboardButton(text='😊')
+    emoji1 = types.KeyboardButton(text='😢')
+    emoji2 = types.KeyboardButton(text='🙂')
     keyboard.add(emoji1, emoji2, emoji3)
     bot.send_message(chat_id, 'Выберите смайлик:', reply_markup=keyboard)
     bot.register_next_step_handler(message, lambda m: add_note_with_smiley(m, text, chat_id, m.text))
@@ -60,15 +60,14 @@ def show(message):
 
 
 def show_func(message):
-    date = message.text  # получаем дату из сообщения
+    date = message.text
     cursor.execute("SELECT text FROM notes WHERE date = %s AND chat_id = %s", (date, message.chat.id))
-    notes = cursor.fetchall()  # получаем все заметки из базы данных
-    if notes:
-        for note in notes:
-            bot.send_message(message.chat.id, note)  # отправляем текст каждой заметки пользователю
+    note = cursor.fetchone()
+    if note:
+        bot.send_message(message.chat.id, note)
     else:
         bot.send_message(message.chat.id,
-                         'Заметки на эту дату не найдены')  # отправляем сообщение об ошибке, если заметки не найдены
+                         'Заметки на эту дату не найдены')
 
 
 @bot.message_handler(commands=['start', 'hello'])
