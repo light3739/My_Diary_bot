@@ -29,8 +29,6 @@ def add(message):
 def ask_for_smiley(message):
     text = message.text
     chat_id = message.chat.id
-
-    # Create a custom keyboard with the available emojis
     keyboard = types.ReplyKeyboardMarkup(row_width=3)
     emoji1 = types.KeyboardButton(text='😊')
     emoji2 = types.KeyboardButton(text='😢')
