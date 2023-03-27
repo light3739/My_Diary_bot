@@ -1,9 +1,9 @@
 import os
-from datetime import datetime
 import requests
 from bs4 import BeautifulSoup
 import time
 import telebot
+import datetime
 import calendar
 import mysql.connector
 from telebot import types
@@ -22,8 +22,15 @@ cursor.execute('''create table if not exists notes (date date, chat_id int, text
 
 @bot.message_handler(commands=['add'])
 def add(message):
-    bot.send_message(chat_id=message.chat.id, text='Введите текст:')
-    bot.register_next_step_handler(message, lambda m: ask_for_smiley(m))
+    # Check if a note for today already exists
+    today = datetime.date.today()
+    cursor.execute("SELECT * FROM notes WHERE date = %s AND chat_id = %s", (today, message.chat.id))
+    note = cursor.fetchone()
+    if note:
+        bot.send_message(chat_id=message.chat.id, text='Заметка на сегодня уже существует')
+    else:
+        bot.send_message(chat_id=message.chat.id, text='Введите текст:')
+        bot.register_next_step_handler(message, lambda m: ask_for_smiley(m))
 
 
 def ask_for_smiley(message):
@@ -34,17 +41,16 @@ def ask_for_smiley(message):
     emoji2 = types.KeyboardButton(text='😢')
     emoji3 = types.KeyboardButton(text='🙂')
     keyboard.add(emoji1, emoji2, emoji3)
-
     bot.send_message(chat_id, 'Выберите смайлик:', reply_markup=keyboard)
     bot.register_next_step_handler(message, lambda m: add_note_with_smiley(m, text, chat_id, m.text))
 
 
 def add_note_with_smiley(message, text, chat_id, smiley):
-    date = datetime.now().date()
+    date = datetime.date.today()
     cursor.execute("INSERT INTO notes (date, chat_id, text, smiley) VALUES (%s, %s, %s, %s)",
                    (date, chat_id, text, smiley))
     conn.commit()
-    bot.send_message(chat_id, 'Заметка добавлена!',  reply_markup=types.ReplyKeyboardRemove())
+    bot.send_message(chat_id, 'Заметка добавлена', reply_markup=types.ReplyKeyboardRemove())
 
 
 @bot.message_handler(commands=['show'])
