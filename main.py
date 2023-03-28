@@ -61,20 +61,12 @@ def show(message):
 
 
 def get_notes(month):
-    # prepare the SQL query with a range condition
     query = "SELECT DATE_FORMAT(date, '%Y-%m-%d') FROM notes WHERE MONTH(date) = %s"
-
-    # define the start and end dates of the month
     year = 2023
     start_date = f"{year}-{month:02}-01"
     end_date = f"{year}-{month:02}-{calendar.monthrange(year, month)[1]}"
-
-    # execute the query with the start and end dates
     cursor.execute(query, (month,))
-
-    # fetch the results as a set of dates
     notes = {str(date) for date in cursor.fetchall() if date}
-
     return notes
 
 
@@ -105,10 +97,10 @@ def calendar_callback(message):
             else:
                 day_str = str(day)
                 date = datetime.date(year, month, day)
-                bot.send_message(chat_id=chat_id, text=str(date))
                 if str(date) in str(notes):
-                    day_str += "•"  # add a dot at the end of days with notes
-
+                    cursor.execute("SELECT smiley FROM notes WHERE date = %s AND chat_id = %s", (date, message.chat.id))
+                    smail = cursor.fetchone()
+                    day_str += str(smail)[2]  # костыль ебаный
                 row.append(InlineKeyboardButton(day_str, callback_data=day_str))
         keyboard.append(row)
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -131,7 +123,7 @@ def handle_query(call):
 def test_callback(message):
     chat_id = message.chat.id
     bot.send_message(chat_id, str(get_notes(3)))
-    if "2023-03-27" in str(get_notes(3)):
+    if str(datetime.date(2023, 3, 27)) in str(get_notes(3)):
         bot.send_message(chat_id, text="jaaaaa")
 
 
