@@ -7,6 +7,7 @@ import datetime
 import calendar
 import mysql.connector
 from telebot import types
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 
 BOT_TOKEN = '5873352611:AAG1jcPiabZdUSLUStLBNROhjWr98NkNONo'
 bot = telebot.TeleBot(BOT_TOKEN)
@@ -59,6 +60,24 @@ def show(message):
     bot.register_next_step_handler(message, show_func)
 
 
+def get_notes(month):
+    # prepare the SQL query with a range condition
+    query = "SELECT DATE_FORMAT(date, '%Y-%m-%d') FROM notes WHERE MONTH(date) = %s"
+
+    # define the start and end dates of the month
+    year = 2023
+    start_date = f"{year}-{month:02}-01"
+    end_date = f"{year}-{month:02}-{calendar.monthrange(year, month)[1]}"
+
+    # execute the query with the start and end dates
+    cursor.execute(query, (month,))
+
+    # fetch the results as a set of dates
+    notes = {str(date) for date in cursor.fetchall() if date}
+
+    return notes
+
+
 def show_func(message):
     date = message.text
     cursor.execute("SELECT text FROM notes WHERE date = %s AND chat_id = %s", (date, message.chat.id))
@@ -68,6 +87,52 @@ def show_func(message):
     else:
         bot.send_message(message.chat.id,
                          'Заметки на эту дату не найдены')
+
+
+@bot.message_handler(commands=['calendar'])
+def calendar_callback(message):
+    chat_id = message.chat.id
+    bot.send_message(chat_id, text="Choose a date:")
+    year = 2023
+    month = datetime.datetime.now().month
+    notes = get_notes(month)
+    keyboard = []
+    for week in calendar.monthcalendar(year, month):
+        row = []
+        for day in week:
+            if day == 0:
+                row.append(InlineKeyboardButton(" ", callback_data="ignore"))
+            else:
+                day_str = str(day)
+                date = datetime.date(year, month, day)
+                bot.send_message(chat_id=chat_id, text=str(date))
+                if str(date) in str(notes):
+                    day_str += "•"  # add a dot at the end of days with notes
+
+                row.append(InlineKeyboardButton(day_str, callback_data=day_str))
+        keyboard.append(row)
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    bot.send_message(chat_id=chat_id, text="Calendar", reply_markup=reply_markup)
+
+
+@bot.callback_query_handler(func=lambda call: True)
+def handle_query(call):
+    chat_id = call.message.chat.id
+    message_id = call.message.message_id
+    if call.data == "ignore":
+        bot.answer_callback_query(call.id)
+    else:
+        bot.edit_message_text(text="Вы выбрали дату: {}".format(call.data),
+                              chat_id=chat_id,
+                              message_id=message_id)
+
+
+@bot.message_handler(commands=['test'])
+def test_callback(message):
+    chat_id = message.chat.id
+    bot.send_message(chat_id, str(get_notes(3)))
+    if "2023-03-27" in str(get_notes(3)):
+        bot.send_message(chat_id, text="jaaaaa")
 
 
 @bot.message_handler(commands=['start', 'hello'])
